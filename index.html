@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Xeneize">
+<meta name="theme-color" content="#071a4a">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<!-- /cabecera-app -->
+<title>¿Cuánto sabés de Boca?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Saira+Condensed:wght@600;700;800&display=swap">
+<style>
+/* Layout: una sola columna tipo pantalla de celular; la franja de oro de la camiseta cruza la portada y el marcador del estadio encabeza cada pregunta. */
+:root {
+  --azul: #071a4a;        /* fondo: azul de la camiseta, de noche */
+  --azul-2: #0d2766;      /* superficies */
+  --azul-3: #1a3a85;      /* bordes y botones en reposo */
+  --oro: #f6c21c;         /* acento: la franja */
+  --tiza: #eef2fb;        /* texto principal */
+  --niebla: #9fb0d6;      /* texto secundario */
+  --cancha: #2fbf71;      /* acierto */
+  --tarjeta: #e5484d;     /* error */
+  --f-display: "Saira Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "Barlow", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--azul);
+  color: var(--tiza);
+  font: 500 17px/1.4 var(--f-body);
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.app {
+  min-height: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: calc(env(safe-area-inset-top, 0px) + 16px) calc(env(safe-area-inset-bottom, 0px) + 20px);
+  display: flex;
+  flex-direction: column;
+}
+.pantalla { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+h1, h2 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-height: .95; }
+.eyebrow {
+  font: 700 13px/1 var(--f-display);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--niebla);
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible { outline: 3px solid var(--oro); outline-offset: 3px; }
+.btn {
+  border: 0;
+  border-radius: 14px;
+  padding: 18px 20px;
+  font: 800 22px/1 var(--f-display);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  background: var(--oro);
+  color: var(--azul);
+  width: 100%;
+  transition: transform .12s;
+}
+.btn:active { transform: scale(.97); }
+
+/* ---------- Portada ---------- */
+#inicio { justify-content: space-between; }
+.portada { margin-inline: -16px; display: flex; flex-direction: column; gap: 0; padding-top: 6vh; }
+.portada .eyebrow { padding-inline: 16px; margin-bottom: 14px; }
+.franja {
+  background: var(--oro);
+  color: var(--azul);
+  padding: 18px 16px 14px;
+  transform: skewY(-4deg);
+  margin-block: 18px;
+}
+.franja h1 {
+  transform: skewY(4deg);
+  font-size: clamp(58px, 19vw, 92px);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: -.01em;
+}
+.portada .sub {
+  padding-inline: 16px;
+  margin: 10px 0 0;
+  color: var(--niebla);
+  max-width: 34ch;
+}
+.reglas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.reglas li {
+  border: 1px solid var(--azul-3);
+  border-radius: 12px;
+  padding: 12px 8px;
+  text-align: center;
+  color: var(--niebla);
+  font-size: 13px;
+  line-height: 1.2;
+}
+.reglas b {
+  display: block;
+  font: 800 30px/1 var(--f-display);
+  color: var(--tiza);
+  margin-bottom: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.record-portada {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-top: 1px solid var(--azul-3);
+  padding-top: 14px;
+  color: var(--niebla);
+}
+.record-portada b { font: 800 26px/1 var(--f-display); color: var(--oro); font-variant-numeric: tabular-nums; }
+.pie-portada { display: flex; flex-direction: column; gap: 16px; }
+
+/* ---------- Juego ---------- */
+.marcador {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  background: var(--azul-2);
+  border: 1px solid var(--azul-3);
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-variant-numeric: tabular-nums;
+}
+.marcador .celda { display: flex; flex-direction: column; gap: 3px; }
+.marcador .celda:nth-child(2) { align-items: center; }
+.marcador .celda:last-child { align-items: flex-end; }
+.marcador .eyebrow { font-size: 11px; }
+.marcador .valor { font: 800 28px/1 var(--f-display); }
+#puntos { color: var(--oro); }
+.racha { color: var(--tiza); }
+.racha.encendida { color: var(--oro); }
+
+.reloj { height: 8px; border-radius: 99px; background: var(--azul-2); overflow: hidden; }
+.reloj i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--oro);
+  transform-origin: left;
+}
+.reloj i.apurado { background: var(--tarjeta); }
+
+.pregunta { display: flex; flex-direction: column; gap: 10px; min-height: 120px; justify-content: flex-end; }
+.pregunta h2 {
+  font-family: var(--f-body);
+  font-weight: 700;
+  font-size: clamp(22px, 6.4vw, 28px);
+  line-height: 1.2;
+}
+.opciones { display: flex; flex-direction: column; gap: 10px; }
+.opcion {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+  width: 100%;
+  min-height: 60px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 2px solid var(--azul-3);
+  background: var(--azul-2);
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 1.2;
+  transition: transform .12s, background-color .2s, border-color .2s;
+}
+.opcion:active { transform: scale(.98); }
+.opcion .letra {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: var(--azul-3);
+  font: 800 17px/1 var(--f-display);
+}
+.opcion:disabled { cursor: default; }
+.opcion.bien { border-color: var(--cancha); background: color-mix(in srgb, var(--cancha) 22%, var(--azul-2)); }
+.opcion.bien .letra { background: var(--cancha); color: var(--azul); }
+.opcion.mal { border-color: var(--tarjeta); background: color-mix(in srgb, var(--tarjeta) 20%, var(--azul-2)); animation: tiembla .35s; }
+.opcion.mal .letra { background: var(--tarjeta); }
+.opcion.apagada { opacity: .45; }
+@keyframes tiembla {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+.dato {
+  border-left: 3px solid var(--oro);
+  padding: 4px 0 4px 12px;
+  color: var(--niebla);
+  font-size: 15px;
+  margin: 0;
+}
+.dato strong { color: var(--tiza); display: block; font-size: 16px; margin-bottom: 2px; }
+.dato strong.ok { color: var(--cancha); }
+.dato strong.ko { color: var(--tarjeta); }
+.premio {
+  position: fixed;
+  left: 50%;
+  top: 38%;
+  translate: -50% 0;
+  font: 800 54px/1 var(--f-display);
+  color: var(--oro);
+  pointer-events: none;
+  text-shadow: 0 4px 20px rgba(0,0,0,.5);
+  animation: sube .9s ease-out forwards;
+}
+@keyframes sube { from { opacity: 0; transform: translateY(20px) scale(.8); } 20% { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-50px); } }
+.espaciador { flex: 1; }
+
+/* ---------- Final ---------- */
+#final { justify-content: space-between; text-align: center; }
+.resultado { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-top: 5vh; }
+.resultado h1 {
+  font-size: clamp(44px, 13vw, 64px);
+  text-transform: uppercase;
+  color: var(--oro);
+}
+.resultado p { margin: 0; color: var(--niebla); max-width: 32ch; }
+.cifra { font: 800 96px/1 var(--f-display); font-variant-numeric: tabular-nums; }
+.nuevo-record {
+  background: var(--oro);
+  color: var(--azul);
+  font: 800 15px/1 var(--f-display);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+.resumen {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 8px;
+  width: 100%;
+}
+.resumen div {
+  border: 1px solid var(--azul-3);
+  border-radius: 12px;
+  padding: 12px 6px;
+  font-size: 13px;
+  color: var(--niebla);
+}
+.resumen b { display: block; font: 800 28px/1 var(--f-display); color: var(--tiza); font-variant-numeric: tabular-nums; margin-bottom: 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<!-- /cuerpo-app -->
+<main class="app">
+
+  <section id="inicio" class="pantalla">
+    <div class="portada">
+      <span class="eyebrow">Trivia xeneize · desde 1905</span>
+      <div class="franja"><h1>¿Cuánto sabés de Boca?</h1></div>
+      <p class="sub">Copas, ídolos, La Bombonera y superclásicos. Respondé rápido y encadená aciertos para multiplicar los puntos.</p>
+    </div>
+    <div class="pie-portada">
+      <ul class="reglas">
+        <li><b>10</b>preguntas</li>
+        <li><b>15″</b>por pregunta</li>
+        <li><b>x3</b>con racha de 5</li>
+      </ul>
+      <div class="record-portada"><span>Tu récord</span><b id="record-inicio">0</b></div>
+      <button class="btn" id="jugar" type="button">Salir a la cancha</button>
+    </div>
+  </section>
+
+  <section id="juego" class="pantalla" hidden>
+    <div class="marcador">
+      <div class="celda"><span class="eyebrow">Pregunta</span><span class="valor" id="numero">1/10</span></div>
+      <div class="celda"><span class="eyebrow">Racha</span><span class="valor racha" id="racha">0</span></div>
+      <div class="celda"><span class="eyebrow">Puntos</span><span class="valor" id="puntos">0</span></div>
+    </div>
+    <div class="reloj" aria-hidden="true"><i id="barra"></i></div>
+    <div class="pregunta">
+      <span class="eyebrow" id="categoria">Historia</span>
+      <h2 id="texto">Cargando…</h2>
+    </div>
+    <div class="opciones" id="opciones"></div>
+    <p class="dato" id="dato" hidden></p>
+    <div class="espaciador"></div>
+    <button class="btn" id="siguiente" type="button" hidden>Siguiente</button>
+  </section>
+
+  <section id="final" class="pantalla" hidden>
+    <div class="resultado">
+      <span class="eyebrow">Final del partido</span>
+      <h1 id="titulo-final">Sos de La 12</h1>
+      <p id="frase-final"></p>
+      <div class="cifra" id="puntos-final">0</div>
+      <span class="nuevo-record" id="nuevo-record" hidden>Nuevo récord</span>
+      <div class="resumen">
+        <div><b id="aciertos-final">0</b>aciertos</div>
+        <div><b id="racha-final">0</b>mejor racha</div>
+        <div><b id="record-final">0</b>tu récord</div>
+      </div>
+    </div>
+    <div class="pie-portada">
+      <button class="btn" id="otra" type="button">Jugar otra vez</button>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// Cada pregunta: c = categoría, p = pregunta, r = respuestas (la primera es la correcta), d = dato que se muestra después.
+const PREGUNTAS = [
+  { c: "Historia", p: "¿En qué año se fundó Boca Juniors?", r: ["1905", "1901", "1913", "1923"], d: "El club se fundó el 3 de abril de 1905 en el barrio de La Boca." },
+  { c: "Historia", p: "¿En qué barrio de Buenos Aires nació el club?", r: ["La Boca", "San Telmo", "Barracas", "Palermo"], d: "Lo fundaron vecinos del barrio, muchos de ellos hijos de inmigrantes genoveses." },
+  { c: "Historia", p: "Según la historia del club, ¿de dónde salieron los colores azul y oro?", r: ["De la bandera de un barco sueco", "De la bandera de Génova", "De un barco griego", "De la camiseta de un club inglés"], d: "Decidieron usar los colores de la bandera del primer barco que entrara al puerto. Era sueco." },
+  { c: "Historia", p: "¿Qué quiere decir “xeneize”?", r: ["Genovés", "Marinero", "Del puerto", "Valiente"], d: "Es “genovés” en el dialecto de Génova, por los inmigrantes italianos del barrio." },
+  { c: "Historia", p: "¿Cómo se conoce a la hinchada de Boca?", r: ["La 12", "La Guardia Imperial", "Los Borrachos del Tablón", "La Pandilla"], d: "Dicen que la hinchada es el jugador número 12 del equipo." },
+  { c: "Historia", p: "¿Qué frase usan los hinchas para decir que Boca es el club más popular del país?", r: ["La mitad más uno", "El más grande", "El club del pueblo", "El rey de copas"], d: "“La mitad más uno” quiere decir que más de la mitad del país es de Boca." },
+  { c: "Historia", p: "De los cinco grandes del fútbol argentino, ¿cuál nunca descendió?", r: ["Boca Juniors", "River Plate", "Independiente", "Racing"], d: "Boca siempre jugó en Primera División. River (2011), Independiente (2013), Racing (1983) y San Lorenzo (1981) descendieron alguna vez." },
+  { c: "Historia", p: "¿Qué presidente de Boca llegó después a ser presidente de la Nación?", r: ["Mauricio Macri", "Alberto J. Armando", "Daniel Angelici", "Pedro Pompilio"], d: "Macri presidió el club entre 1995 y 2007, una de las épocas más ganadoras de la historia." },
+
+  { c: "La Bombonera", p: "¿Cuál es el nombre oficial de La Bombonera?", r: ["Estadio Alberto J. Armando", "Estadio Antonio V. Liberti", "Estadio Juan Domingo Perón", "Estadio Diego Armando Maradona"], d: "Lleva el nombre de Alberto J. Armando, histórico presidente del club." },
+  { c: "La Bombonera", p: "¿En qué año se inauguró La Bombonera?", r: ["1940", "1925", "1953", "1978"], d: "Se inauguró el 25 de mayo de 1940." },
+  { c: "La Bombonera", p: "¿En qué calle está la entrada histórica de La Bombonera?", r: ["Brandsen 805", "Caminito 1905", "Av. Figueroa Alcorta 7597", "Olavarría 500"], d: "Brandsen 805 es una de las direcciones más famosas del fútbol mundial." },
+  { c: "La Bombonera", p: "¿Por qué le dicen “La Bombonera”?", r: ["Por su forma de caja de bombones", "Porque la construyó un chocolatero", "Por el ruido de los bombos", "Por un apodo de los jugadores"], d: "Tres tribunas en herradura y una recta muy vertical: parece una caja de bombones." },
+  { c: "La Bombonera", p: "¿Qué dicen los hinchas cuando la cancha se mueve con el aliento de La 12?", r: ["La Bombonera no tiembla, late", "La Bombonera se cae", "La Bombonera ruge", "La Bombonera salta"], d: "Las tribunas se mueven de verdad cuando la hinchada salta." },
+
+  { c: "Copas", p: "¿Cuántas Copas Libertadores ganó Boca?", r: ["6", "5", "7", "4"], d: "1977, 1978, 2000, 2001, 2003 y 2007." },
+  { c: "Copas", p: "¿En qué año ganó Boca su primera Copa Libertadores?", r: ["1977", "1963", "1978", "2000"], d: "En 1977, con el Toto Lorenzo como técnico. Al año siguiente repitió." },
+  { c: "Copas", p: "¿A qué equipo le ganó Boca la final de la Libertadores 1977?", r: ["Cruzeiro", "Santos", "Palmeiras", "Olimpia"], d: "La final contra Cruzeiro se definió por penales." },
+  { c: "Copas", p: "¿Contra quién ganó Boca la final de la Libertadores 1978?", r: ["Deportivo Cali", "Cruzeiro", "Peñarol", "Olimpia"], d: "Ese fue el segundo título continental seguido." },
+  { c: "Copas", p: "¿Quién fue el técnico de las Libertadores de 1977 y 1978?", r: ["Juan Carlos “Toto” Lorenzo", "Carlos Bianchi", "Alfio Basile", "Silvio Marzolini"], d: "El Toto Lorenzo armó el primer Boca campeón de América." },
+  { c: "Copas", p: "¿Contra quién fue la final de la Libertadores 2000?", r: ["Palmeiras", "Cruz Azul", "Santos", "Grêmio"], d: "Boca ganó por penales en el Morumbí." },
+  { c: "Copas", p: "La final de la Libertadores 2001 fue contra un equipo mexicano. ¿Cuál?", r: ["Cruz Azul", "América", "Chivas", "Pumas"], d: "Boca ganó 1 a 0 en el Estadio Azteca y después se impuso por penales." },
+  { c: "Copas", p: "¿A quién le ganó Boca la final de la Libertadores 2003?", r: ["Santos", "Palmeiras", "Grêmio", "Once Caldas"], d: "Le ganó los dos partidos al Santos: 2-0 en Buenos Aires y 3-1 en Brasil." },
+  { c: "Copas", p: "¿Contra quién ganó Boca la Libertadores 2007?", r: ["Grêmio", "Santos", "Fluminense", "Palmeiras"], d: "Riquelme fue la gran figura de esa copa." },
+  { c: "Copas", p: "¿Qué técnico ganó la Libertadores 2007 con Boca?", r: ["Miguel Ángel Russo", "Carlos Bianchi", "Alfio Basile", "Jorge Almirón"], d: "Russo ganó esa copa en su primera etapa como técnico de Boca." },
+  { c: "Copas", p: "¿Cuántas Copas Intercontinentales ganó Boca?", r: ["3", "2", "4", "1"], d: "Contra el Borussia Mönchengladbach (1977), el Real Madrid (2000) y el Milan (2003)." },
+  { c: "Copas", p: "¿A qué equipo le ganó Boca la Intercontinental 2000 en Tokio?", r: ["Real Madrid", "Milan", "Bayern Múnich", "Manchester United"], d: "Ganó 2 a 1 con dos goles de Martín Palermo en los primeros minutos." },
+  { c: "Copas", p: "¿Quién hizo los dos goles de Boca contra el Real Madrid en Tokio 2000?", r: ["Martín Palermo", "Juan Román Riquelme", "Marcelo Delgado", "Guillermo Barros Schelotto"], d: "Palermo hizo los dos goles en los primeros seis minutos." },
+  { c: "Copas", p: "¿Contra quién ganó Boca la Intercontinental 2003?", r: ["Milan", "Real Madrid", "Porto", "Barcelona"], d: "Empató 1 a 1 y ganó por penales en Japón." },
+  { c: "Copas", p: "¿Cuántas Copas Sudamericanas ganó Boca?", r: ["2", "1", "3", "Ninguna"], d: "Las ganó en 2004 y 2005, una atrás de la otra." },
+  { c: "Copas", p: "¿Contra quién perdió Boca la final de la Libertadores 2023 en el Maracaná?", r: ["Fluminense", "Palmeiras", "Flamengo", "Corinthians"], d: "Perdió 2 a 1 en el alargue." },
+  { c: "Copas", p: "¿Qué arquero fue héroe en los penales del camino a la final de 2023?", r: ["Sergio “Chiquito” Romero", "Agustín Rossi", "Esteban Andrada", "Agustín Orión"], d: "Atajó penales contra Nacional, Racing y Palmeiras." },
+  { c: "Copas", p: "¿Contra quién perdió Boca la final de la Libertadores 1963?", r: ["El Santos de Pelé", "Peñarol", "Estudiantes", "Independiente"], d: "Fue la primera final de Libertadores que jugó Boca." },
+  { c: "Copas", p: "¿Contra quién perdió Boca la final de la Libertadores 2004?", r: ["Once Caldas", "Santos", "São Paulo", "Corinthians"], d: "El equipo colombiano ganó la final por penales." },
+
+  { c: "Ídolos", p: "¿Quién es el máximo goleador de la historia de Boca?", r: ["Martín Palermo", "Francisco Varallo", "Roberto Cherro", "Carlos Tevez"], d: "Palermo hizo 236 goles oficiales con la azul y oro." },
+  { c: "Ídolos", p: "¿Qué apodo tiene Martín Palermo?", r: ["El Titán", "El Apache", "El Mellizo", "El Pato"], d: "También le decían “el Loco” por sus goles imposibles." },
+  { c: "Ídolos", p: "Palermo hizo un famoso gol de cabeza desde casi 40 metros. ¿A qué equipo?", r: ["Vélez", "River", "Racing", "Independiente"], d: "Fue en 2009, un cabezazo desde unos 38 metros." },
+  { c: "Ídolos", p: "¿Qué número usaba Juan Román Riquelme?", r: ["10", "8", "5", "9"], d: "La 10 de Boca es la camiseta de Riquelme para siempre." },
+  { c: "Ídolos", p: "¿Qué festejo famoso hizo Riquelme en 2001?", r: ["El Topo Gigio", "La gallina", "El avioncito", "La metralleta"], d: "Se puso las manos en las orejas y se lo dedicó al presidente Macri." },
+  { c: "Ídolos", p: "En la Libertadores 2000, Riquelme le tiró un caño famoso a un defensor de River. ¿A quién?", r: ["Mario Yepes", "Celso Ayala", "Eduardo Berizzo", "Martín Demichelis"], d: "Fue en los cuartos de final. Ese caño quedó en la historia del superclásico." },
+  { c: "Ídolos", p: "¿Qué cargo asumió Riquelme en el club a fines de 2023?", r: ["Presidente", "Técnico", "Vicepresidente", "Mánager"], d: "Antes había sido vicepresidente desde 2019." },
+  { c: "Ídolos", p: "¿Qué estrella jugó en la despedida de Riquelme en La Bombonera en 2023?", r: ["Lionel Messi", "Cristiano Ronaldo", "Neymar", "Zinedine Zidane"], d: "Messi jugó el partido homenaje junto a Riquelme en la Bombonera llena." },
+  { c: "Ídolos", p: "¿En qué año salió campeón Maradona con Boca?", r: ["1981", "1986", "1995", "1978"], d: "Ganó el Metropolitano 1981 en su primera etapa en el club." },
+  { c: "Ídolos", p: "En 1981, Maradona le hizo un gol famoso a River después de gambetear al arquero. ¿Quién era?", r: ["Ubaldo Fillol", "Nery Pumpido", "Sergio Goycochea", "Germán Burgos"], d: "Gambeteó a Fillol y dejó en el suelo a Tarantini antes de meterla." },
+  { c: "Ídolos", p: "En el último partido de Maradona, en 1997 contra River, ¿quién entró en su lugar?", r: ["Juan Román Riquelme", "Martín Palermo", "Claudio Caniggia", "Guillermo Barros Schelotto"], d: "Maradona salió en el entretiempo y entró un joven Riquelme. Boca ganó 2 a 1." },
+  { c: "Ídolos", p: "¿Qué apodo tiene Carlos Tevez?", r: ["El Apache", "El Titán", "El Pipa", "El Chelo"], d: "Le dicen así por Fuerte Apache, el barrio donde se crió." },
+  { c: "Ídolos", p: "¿Quién es el jugador que más títulos ganó con Boca?", r: ["Sebastián Battaglia", "Juan Román Riquelme", "Martín Palermo", "Hugo Gatti"], d: "Battaglia ganó 17 títulos con la azul y oro." },
+  { c: "Ídolos", p: "¿Quién es el jugador con más partidos oficiales en Boca?", r: ["Roberto Mouzo", "Hugo Gatti", "Martín Palermo", "Silvio Marzolini"], d: "Mouzo jugó 426 partidos oficiales." },
+  { c: "Ídolos", p: "¿Qué arquero de Boca era conocido como “el Loco”?", r: ["Hugo Gatti", "Óscar Córdoba", "Roberto Abbondanzieri", "Carlos Navarro Montoya"], d: "Gatti fue arquero de Boca en los títulos de 1977 y 1978." },
+  { c: "Ídolos", p: "¿De qué país era Óscar Córdoba, arquero de las copas de 2000 y 2001?", r: ["Colombia", "Paraguay", "Uruguay", "Perú"], d: "Atajó penales decisivos en las finales contra Palmeiras y Cruz Azul." },
+  { c: "Ídolos", p: "¿A qué defensor colombiano le decían “el Patrón”?", r: ["Jorge Bermúdez", "Mario Yepes", "Iván Córdoba", "Frank Fabra"], d: "Fue el jefe de la defensa en la era Bianchi." },
+  { c: "Ídolos", p: "¿Qué defensor de Boca era conocido como “el Muro”?", r: ["Walter Samuel", "Rolando Schiavi", "Nicolás Burdisso", "Hugo Ibarra"], d: "Samuel salió de Boca en 2000 y triunfó en Europa." },
+  { c: "Ídolos", p: "¿Cómo se llaman los mellizos Barros Schelotto?", r: ["Guillermo y Gustavo", "Guillermo y Martín", "Gustavo y Diego", "Sebastián y Gustavo"], d: "Guillermo fue un ídolo como jugador y después técnico del club." },
+  { c: "Ídolos", p: "¿Qué apodo tiene Darío Benedetto?", r: ["El Pipa", "El Chino", "El Toro", "El Apache"], d: "Benedetto hizo goles clave en la Libertadores 2018." },
+  { c: "Ídolos", p: "¿Qué goleador uruguayo llegó a Boca en 2023?", r: ["Edinson Cavani", "Luis Suárez", "Diego Forlán", "Darwin Núñez"], d: "Cavani llegó en 2023 desde el Valencia de España." },
+  { c: "Ídolos", p: "¿Qué capitán de Boca fue expulsado contra Inglaterra en el Mundial 1966?", r: ["Antonio Rattín", "Silvio Marzolini", "Ángel Clemente Rojas", "Roberto Mouzo"], d: "Rattín se sentó en la alfombra roja de la Reina en Wembley." },
+  { c: "Ídolos", p: "¿Qué goleador de Boca jugó la final del primer Mundial, en 1930?", r: ["Francisco Varallo", "Roberto Cherro", "Domingo Tarasconi", "Ernesto Lazzatti"], d: "Pancho Varallo jugó esa final con la selección argentina contra Uruguay." },
+
+  { c: "Técnicos", p: "¿Quién es el técnico más ganador de la historia de Boca?", r: ["Carlos Bianchi", "Alfio Basile", "Juan Carlos Lorenzo", "Miguel Ángel Russo"], d: "Ganó tres Libertadores (2000, 2001 y 2003) y dos Intercontinentales." },
+  { c: "Técnicos", p: "¿Cuál es el apodo de Carlos Bianchi?", r: ["El Virrey", "El Coco", "El Toto", "El Flaco"], d: "El apodo viene del virrey Bianchi de la época colonial." },
+  { c: "Técnicos", p: "Antes de llegar a Boca, ¿con qué club ganó Bianchi la Libertadores?", r: ["Vélez Sarsfield", "Estudiantes", "Argentinos Juniors", "Independiente"], d: "Ganó la Libertadores y la Intercontinental de 1994 con Vélez." },
+
+  { c: "Superclásico", p: "¿En qué ciudad se jugó la final de la Libertadores 2018 entre Boca y River?", r: ["Madrid", "Buenos Aires", "Asunción", "Montevideo"], d: "La vuelta se jugó en el Santiago Bernabéu. Ganó River 3 a 1 en el alargue." },
+  { c: "Superclásico", p: "En 2004, Tevez le hizo un festejo a la hinchada de River en el Monumental. ¿Cuál?", r: ["La gallina", "El Topo Gigio", "El avioncito", "Se sacó la camiseta"], d: "Lo expulsaron, pero Boca ganó la semifinal por penales." },
+  { c: "Superclásico", p: "¿Por qué se suspendió el superclásico de la Libertadores 2015 en La Bombonera?", r: ["Por gas pimienta contra los jugadores de River", "Por la lluvia", "Por un corte de luz", "Por una pelea entre jugadores"], d: "Le dieron la serie a River y Boca quedó eliminado." }
+];
+
+const POR_PARTIDA = 10;
+const SEGUNDOS = 15;
+const CLAVE_RECORD = "boca-trivia-record";
+
+const $ = (id) => document.getElementById(id);
+const pantallas = { inicio: $("inicio"), juego: $("juego"), final: $("final") };
+
+function mostrar(nombre) {
+  for (const [k, el] of Object.entries(pantallas)) el.hidden = k !== nombre;
+  window.scrollTo(0, 0);
+}
+
+function leerRecord() {
+  try { return Number(localStorage.getItem(CLAVE_RECORD)) || 0; } catch { return 0; }
+}
+function guardarRecord(valor) {
+  try { localStorage.setItem(CLAVE_RECORD, String(valor)); } catch {}
+}
+
+function mezclar(lista) {
+  const a = lista.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Sonidos cortos generados con Web Audio (solo suenan después de tocar un botón).
+let audio;
+function sonar(tipo) {
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    const notas = tipo === "bien" ? [660, 880] : [220, 165];
+    notas.forEach((f, i) => {
+      const o = audio.createOscillator();
+      const g = audio.createGain();
+      o.type = tipo === "bien" ? "triangle" : "sawtooth";
+      o.frequency.value = f;
+      const t = audio.currentTime + i * 0.09;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+      o.connect(g).connect(audio.destination);
+      o.start(t);
+      o.stop(t + 0.22);
+    });
+  } catch {}
+}
+
+const estado = { preguntas: [], indice: 0, puntos: 0, racha: 0, mejorRacha: 0, aciertos: 0, inicio: 0, raf: 0, respondida: false };
+
+function multiplicador(racha) {
+  return racha >= 5 ? 3 : racha >= 3 ? 2 : 1;
+}
+
+function empezar() {
+  sonar("bien");
+  Object.assign(estado, {
+    preguntas: mezclar(PREGUNTAS).slice(0, POR_PARTIDA),
+    indice: 0, puntos: 0, racha: 0, mejorRacha: 0, aciertos: 0
+  });
+  mostrar("juego");
+  cargarPregunta();
+}
+
+function actualizarMarcador() {
+  $("numero").textContent = `${estado.indice + 1}/${POR_PARTIDA}`;
+  $("puntos").textContent = estado.puntos;
+  const m = multiplicador(estado.racha);
+  $("racha").textContent = m > 1 ? `${estado.racha} · x${m}` : estado.racha;
+  $("racha").classList.toggle("encendida", m > 1);
+}
+
+function cargarPregunta() {
+  const q = estado.preguntas[estado.indice];
+  estado.respondida = false;
+  actualizarMarcador();
+  $("categoria").textContent = q.c;
+  $("texto").textContent = q.p;
+  $("dato").hidden = true;
+  $("siguiente").hidden = true;
+
+  const cont = $("opciones");
+  cont.innerHTML = "";
+  mezclar(q.r).forEach((texto, i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "opcion";
+    b.dataset.correcta = texto === q.r[0] ? "1" : "";
+    b.innerHTML = `<span class="letra">${"ABCD"[i]}</span><span></span>`;
+    b.lastChild.textContent = texto;
+    b.addEventListener("click", () => responder(b));
+    cont.appendChild(b);
+  });
+
+  estado.inicio = performance.now();
+  cancelAnimationFrame(estado.raf);
+  correrReloj();
+}
+
+function correrReloj() {
+  const pasado = (performance.now() - estado.inicio) / 1000;
+  const resto = Math.max(0, 1 - pasado / SEGUNDOS);
+  const barra = $("barra");
+  barra.style.transform = `scaleX(${resto})`;
+  barra.classList.toggle("apurado", resto < 0.33);
+  if (resto <= 0) return responder(null);
+  estado.raf = requestAnimationFrame(correrReloj);
+}
+
+function responder(boton) {
+  if (estado.respondida) return;
+  estado.respondida = true;
+  cancelAnimationFrame(estado.raf);
+
+  const q = estado.preguntas[estado.indice];
+  const segundos = (performance.now() - estado.inicio) / 1000;
+  const acerto = !!boton && boton.dataset.correcta === "1";
+
+  for (const b of $("opciones").children) {
+    b.disabled = true;
+    if (b.dataset.correcta) b.classList.add("bien");
+    else if (b === boton) b.classList.add("mal");
+    else b.classList.add("apagada");
+  }
+
+  let titulo;
+  if (acerto) {
+    estado.racha++;
+    estado.aciertos++;
+    estado.mejorRacha = Math.max(estado.mejorRacha, estado.racha);
+    const velocidad = Math.round(50 * Math.max(0, 1 - segundos / SEGUNDOS));
+    const ganados = (100 + velocidad) * multiplicador(estado.racha);
+    estado.puntos += ganados;
+    titulo = `<strong class="ok">¡Golazo! +${ganados}</strong>`;
+    festejar(`+${ganados}`);
+    sonar("bien");
+  } else {
+    estado.racha = 0;
+    titulo = boton ? `<strong class="ko">Era “${q.r[0]}”</strong>` : `<strong class="ko">Se terminó el tiempo. Era “${q.r[0]}”</strong>`;
+    sonar("mal");
+  }
+
+  actualizarMarcador();
+  const dato = $("dato");
+  dato.innerHTML = titulo;
+  dato.append(q.d);
+  dato.hidden = false;
+
+  const ultima = estado.indice === POR_PARTIDA - 1;
+  $("siguiente").textContent = ultima ? "Ver resultado" : "Siguiente";
+  $("siguiente").hidden = false;
+}
+
+function festejar(texto) {
+  const el = document.createElement("div");
+  el.className = "premio";
+  el.textContent = texto;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 950);
+}
+
+function siguiente() {
+  if (estado.indice < POR_PARTIDA - 1) {
+    estado.indice++;
+    cargarPregunta();
+  } else {
+    terminar();
+  }
+}
+
+const RANGOS = [
+  { min: 10, titulo: "Sos de La 12", frase: "Diez de diez. Tenés el carnet de socio vitalicio." },
+  { min: 8, titulo: "Bostero de ley", frase: "Sabés más que muchos que van todos los domingos." },
+  { min: 6, titulo: "Hincha de platea", frase: "Vas bien, pero todavía te falta tablón." },
+  { min: 4, titulo: "Turista en Caminito", frase: "Te sacaste la foto con la camiseta, pero hay que estudiar." },
+  { min: 0, titulo: "¿Sos de River?", frase: "Así no se puede. Volvé a intentarlo." }
+];
+
+function terminar() {
+  const anterior = leerRecord();
+  const esRecord = estado.puntos > anterior;
+  if (esRecord) guardarRecord(estado.puntos);
+  const rango = RANGOS.find((r) => estado.aciertos >= r.min);
+
+  $("titulo-final").textContent = rango.titulo;
+  $("frase-final").textContent = rango.frase;
+  $("puntos-final").textContent = estado.puntos;
+  $("aciertos-final").textContent = `${estado.aciertos}/${POR_PARTIDA}`;
+  $("racha-final").textContent = estado.mejorRacha;
+  $("record-final").textContent = Math.max(anterior, estado.puntos);
+  $("nuevo-record").hidden = !esRecord || estado.puntos === 0;
+  $("record-inicio").textContent = Math.max(anterior, estado.puntos);
+  mostrar("final");
+}
+
+$("jugar").addEventListener("click", empezar);
+$("otra").addEventListener("click", empezar);
+$("siguiente").addEventListener("click", siguiente);
+$("record-inicio").textContent = leerRecord();
+</script>
+<!-- /fin-app -->
+</body>
+</html>
