@@ -663,7 +663,7 @@ function terminar() {
   $("nuevo-record").hidden = !esRecord || estado.puntos === 0;
   $("record-inicio").textContent = Math.max(anterior, estado.puntos);
   mostrar("final");
-  ofrecerGuardar(esRecord);
+  ofrecerGuardar();
 }
 
 $("jugar").addEventListener("click", empezar);
@@ -683,6 +683,7 @@ const SUPABASE = {
 
 const CLAVE_NOMBRE = "boca-trivia-nombre";
 const CLAVE_JUGADOR = "boca-trivia-jugador";
+const CLAVE_EN_TABLA = "boca-trivia-en-tabla";  // mejor puntaje que este teléfono anotó en la tabla
 const tabla = { fuente: null, filas: [], miId: null };
 
 function pintarTablas() {
@@ -735,8 +736,10 @@ function fuenteSupabase() {
       tabla.filas = (await r.json()).map((x) => limpiarFila(x.nombre, x.puntaje));
       pintarTablas();
     },
-    // En este teléfono el récord local ya dice si hay marca nueva.
-    async puedeGuardar(_puntos, esRecordLocal) { return esRecordLocal; },
+    // La tabla no muestra ids, así que el teléfono recuerda cuánto anotó.
+    async mejorPropio() {
+      try { return Number(localStorage.getItem(CLAVE_EN_TABLA)) || 0; } catch { return 0; }
+    },
     async guardar(nombre, puntos) {
       const r = await fetch(`${base}/rpc/guardar_record`, {
         method: "POST",
@@ -744,6 +747,7 @@ function fuenteSupabase() {
         body: JSON.stringify({ p_jugador: jugador, p_nombre: nombre, p_puntaje: puntos })
       });
       if (!r.ok) throw new Error(r.status);
+      try { localStorage.setItem(CLAVE_EN_TABLA, String(Math.max(puntos, await this.mejorPropio()))); } catch {}
       await this.cargar();
     }
   };
@@ -766,10 +770,10 @@ async function fuenteArtifact() {
   }, () => {});
   return {
     async cargar() {},
-    async puedeGuardar(puntos) {
-      if (puedeEscribir === false) return false;
+    puedeEscribir,
+    async mejorPropio() {
       const snap = await db.doc("records/" + uid).get();
-      return puntos > (snap.exists ? Number(snap.data().puntaje) || 0 : 0);
+      return snap.exists ? Number(snap.data().puntaje) || 0 : 0;
     },
     async guardar(nombre, puntos) {
       await db.doc("records/" + uid).set({ nombre, puntaje: puntos, fecha: new Date().toISOString() });
@@ -785,20 +789,32 @@ async function conectarTabla() {
   } catch {}
 }
 
-async function ofrecerGuardar(esRecordLocal) {
+async function ofrecerGuardar() {
   const form = $("guardar");
   const aviso = $("aviso-guardar");
+  const fila = form.querySelector(".fila");
   form.hidden = true;
   aviso.hidden = true;
   if (!tabla.fuente || estado.puntos === 0) return;
   tabla.fuente.cargar().catch(() => {});
-  let ofrecer = false;
-  try { ofrecer = await tabla.fuente.puedeGuardar(estado.puntos, esRecordLocal); } catch {}
-  if (!ofrecer) return;
+  form.hidden = false;
+  if (tabla.fuente.puedeEscribir === false) {
+    fila.hidden = true;
+    aviso.textContent = "Para anotarte en la tabla pedile al dueño del juego acceso de Colaborador.";
+    aviso.hidden = false;
+    return;
+  }
+  let mejor = 0;
+  try { mejor = await tabla.fuente.mejorPropio(); } catch {}
+  if (estado.puntos <= mejor) {
+    fila.hidden = true;
+    aviso.textContent = `Tu mejor marca en la tabla es ${mejor} puntos. Superala para actualizarla.`;
+    aviso.hidden = false;
+    return;
+  }
   try { $("nombre").value = localStorage.getItem(CLAVE_NOMBRE) || ""; } catch {}
   $("btn-guardar").disabled = false;
-  form.querySelector(".fila").hidden = false;
-  form.hidden = false;
+  fila.hidden = false;
 }
 
 $("guardar").addEventListener("submit", async (e) => {
