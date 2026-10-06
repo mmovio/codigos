@@ -6,6 +6,7 @@ Trivia de Boca Juniors para jugar en el iPhone (o cualquier celular) desde el na
 - 100 puntos por acierto, más un extra por responder rápido.
 - Racha: con 3 aciertos seguidos los puntos valen x2, con 5 valen x3.
 - El récord se guarda en el teléfono.
+- Tabla de récords compartida (nombre y puntaje): cada jugador queda anotado con su mejor marca. Usa la base de datos del Artifact de claude.ai, así que solo aparece cuando el juego se abre desde ahí.
 
 ## Cómo jugarlo en el iPhone
 

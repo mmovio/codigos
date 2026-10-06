@@ -237,8 +237,8 @@ button:focus-visible { outline: 3px solid var(--oro); outline-offset: 3px; }
 .espaciador { flex: 1; }
 
 /* ---------- Final ---------- */
-#final { justify-content: space-between; text-align: center; }
-.resultado { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-top: 5vh; }
+#final { text-align: center; gap: 28px; }
+.resultado { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-top: 3vh; }
 .resultado h1 {
   font-size: clamp(44px, 13vw, 64px);
   text-transform: uppercase;
@@ -271,6 +271,45 @@ button:focus-visible { outline: 3px solid var(--oro); outline-offset: 3px; }
 }
 .resumen b { display: block; font: 800 28px/1 var(--f-display); color: var(--tiza); font-variant-numeric: tabular-nums; margin-bottom: 4px; }
 
+/* ---------- Tabla de récords ---------- */
+.tabla { display: flex; flex-direction: column; gap: 10px; text-align: left; }
+.tabla table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.tabla th {
+  font: 700 12px/1 var(--f-display);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--niebla);
+  text-align: left;
+  padding: 0 8px 8px;
+  border-bottom: 1px solid var(--azul-3);
+}
+.tabla td { padding: 10px 8px; border-bottom: 1px solid var(--azul-2); }
+.tabla th:first-child, .tabla td:first-child { width: 2.2em; color: var(--niebla); padding-left: 0; }
+.tabla th:last-child, .tabla td:last-child { text-align: right; padding-right: 0; }
+.tabla td:last-child { font: 800 20px/1 var(--f-display); color: var(--oro); }
+.tabla td.nombre { overflow-wrap: anywhere; font-weight: 600; }
+.tabla tr.mia td.nombre::after { content: " (vos)"; color: var(--niebla); font-weight: 500; }
+.tabla .vacio { margin: 0; color: var(--niebla); font-size: 15px; }
+.guardar { display: flex; flex-direction: column; gap: 8px; text-align: left; }
+.guardar label { font-weight: 600; }
+.guardar .fila { display: flex; gap: 8px; }
+.guardar input {
+  flex: 1;
+  min-width: 0;
+  font: 600 17px/1 var(--f-body);
+  color: var(--tiza);
+  background: var(--azul-2);
+  border: 2px solid var(--azul-3);
+  border-radius: 12px;
+  padding: 12px;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.guardar input:focus { outline: none; border-color: var(--oro); }
+.guardar .btn { width: auto; padding: 12px 18px; font-size: 18px; }
+.guardar .btn:disabled { opacity: .5; }
+.guardar .aviso { margin: 0; color: var(--niebla); font-size: 15px; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
@@ -295,6 +334,14 @@ button:focus-visible { outline: 3px solid var(--oro); outline-offset: 3px; }
       <div class="record-portada"><span>Tu récord</span><b id="record-inicio">0</b></div>
       <button class="btn" id="jugar" type="button">Salir a la cancha</button>
     </div>
+    <section class="tabla" id="tabla-inicio" hidden>
+      <span class="eyebrow">Tabla de récords</span>
+      <table>
+        <thead><tr><th>#</th><th>Nombre</th><th>Puntos</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="vacio" hidden>Todavía no hay récords. Jugá una partida y anotate primero.</p>
+    </section>
   </section>
 
   <section id="juego" class="pantalla" hidden>
@@ -327,9 +374,25 @@ button:focus-visible { outline: 3px solid var(--oro); outline-offset: 3px; }
         <div><b id="record-final">0</b>tu récord</div>
       </div>
     </div>
+    <form class="guardar" id="guardar" hidden>
+      <label for="nombre">Anotá tu nombre en la tabla de récords</label>
+      <div class="fila">
+        <input id="nombre" name="nombre" type="text" maxlength="20" autocomplete="nickname" placeholder="Tu nombre" required>
+        <button class="btn" id="btn-guardar" type="submit">Guardar</button>
+      </div>
+      <p class="aviso" id="aviso-guardar" hidden></p>
+    </form>
     <div class="pie-portada">
       <button class="btn" id="otra" type="button">Jugar otra vez</button>
     </div>
+    <section class="tabla" id="tabla-final" hidden>
+      <span class="eyebrow">Tabla de récords</span>
+      <table>
+        <thead><tr><th>#</th><th>Nombre</th><th>Puntos</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="vacio" hidden>Todavía no hay récords. Jugá una partida y anotate primero.</p>
+    </section>
   </section>
 
 </main>
@@ -600,12 +663,101 @@ function terminar() {
   $("nuevo-record").hidden = !esRecord || estado.puntos === 0;
   $("record-inicio").textContent = Math.max(anterior, estado.puntos);
   mostrar("final");
+  ofrecerGuardar();
 }
 
 $("jugar").addEventListener("click", empezar);
 $("otra").addEventListener("click", empezar);
 $("siguiente").addEventListener("click", siguiente);
 $("record-inicio").textContent = leerRecord();
+
+// ---------- Tabla de récords compartida (base de datos del Artifact) ----------
+// Cada persona tiene una sola fila: records/<su id> = { nombre, puntaje, fecha }.
+// Solo se actualiza si supera su propio puntaje. Fuera de claude.ai la tabla no aparece.
+const CLAVE_NOMBRE = "boca-trivia-nombre";
+const tabla = { db: null, uid: null, puedeEscribir: null, filas: [] };
+
+function pintarTablas() {
+  for (const id of ["tabla-inicio", "tabla-final"]) {
+    const sec = $(id);
+    const cuerpo = sec.querySelector("tbody");
+    cuerpo.innerHTML = "";
+    tabla.filas.forEach((f, i) => {
+      const tr = document.createElement("tr");
+      if (f.id === tabla.uid) tr.className = "mia";
+      for (const [clase, valor] of [["", i + 1], ["nombre", f.nombre], ["", f.puntaje]]) {
+        const td = document.createElement("td");
+        if (clase) td.className = clase;
+        td.textContent = valor;
+        tr.appendChild(td);
+      }
+      cuerpo.appendChild(tr);
+    });
+    sec.querySelector("table").hidden = tabla.filas.length === 0;
+    sec.querySelector(".vacio").hidden = tabla.filas.length > 0;
+    sec.hidden = false;
+  }
+}
+
+async function conectarTabla() {
+  if (!window.claude || !window.claude.use) return;
+  try {
+    const [db, user] = await Promise.all([claude.use("db"), claude.use("user")]);
+    if (!db) return;
+    tabla.db = db;
+    if (user) {
+      tabla.uid = await user.id();
+      tabla.puedeEscribir = await user.can("data.write");
+    }
+    db.collection("records").orderBy("puntaje", "desc").limit(20).onSnapshot((snap) => {
+      tabla.filas = snap.docs.map((d) => {
+        const x = d.data() || {};
+        return { id: d.id, nombre: String(x.nombre || "Hincha").slice(0, 20), puntaje: Number(x.puntaje) || 0 };
+      });
+      pintarTablas();
+    }, () => {});
+  } catch {}
+}
+
+async function ofrecerGuardar() {
+  const form = $("guardar");
+  const aviso = $("aviso-guardar");
+  form.hidden = true;
+  aviso.hidden = true;
+  if (!tabla.db || !tabla.uid || estado.puntos === 0 || tabla.puedeEscribir === false) return;
+  let propio = 0;
+  try {
+    const snap = await tabla.db.doc("records/" + tabla.uid).get();
+    if (snap.exists) propio = Number(snap.data().puntaje) || 0;
+  } catch {}
+  if (estado.puntos <= propio) return;
+  try { $("nombre").value = localStorage.getItem(CLAVE_NOMBRE) || ""; } catch {}
+  $("btn-guardar").disabled = false;
+  form.querySelector(".fila").hidden = false;
+  form.hidden = false;
+}
+
+$("guardar").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const nombre = $("nombre").value.trim().slice(0, 20);
+  if (!nombre) return;
+  const aviso = $("aviso-guardar");
+  $("btn-guardar").disabled = true;
+  try {
+    await tabla.db.doc("records/" + tabla.uid).set({ nombre, puntaje: estado.puntos, fecha: new Date().toISOString() });
+    try { localStorage.setItem(CLAVE_NOMBRE, nombre); } catch {}
+    $("guardar").querySelector(".fila").hidden = true;
+    aviso.textContent = `Listo, ${nombre}: quedaste anotado con ${estado.puntos} puntos.`;
+  } catch (err) {
+    $("btn-guardar").disabled = false;
+    aviso.textContent = err && err.code === "invalid_argument"
+      ? "No tenés permiso para escribir en la tabla. Pedile al dueño del juego acceso de Colaborador."
+      : "No se pudo guardar. Probá de nuevo en un momento.";
+  }
+  aviso.hidden = false;
+});
+
+conectarTabla();
 </script>
 <!-- /fin-app -->
 </body>
