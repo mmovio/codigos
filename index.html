@@ -663,7 +663,7 @@ function terminar() {
   $("nuevo-record").hidden = !esRecord || estado.puntos === 0;
   $("record-inicio").textContent = Math.max(anterior, estado.puntos);
   mostrar("final");
-  ofrecerGuardar();
+  ofrecerGuardar(esRecord);
 }
 
 $("jugar").addEventListener("click", empezar);
@@ -671,11 +671,19 @@ $("otra").addEventListener("click", empezar);
 $("siguiente").addEventListener("click", siguiente);
 $("record-inicio").textContent = leerRecord();
 
-// ---------- Tabla de récords compartida (base de datos del Artifact) ----------
-// Cada persona tiene una sola fila: records/<su id> = { nombre, puntaje, fecha }.
-// Solo se actualiza si supera su propio puntaje. Fuera de claude.ai la tabla no aparece.
+// ---------- Tabla de récords compartida ----------
+// Dos lugares posibles para guardar la tabla (nombre y puntaje):
+//  - Supabase, cuando el juego está publicado en GitHub Pages (completá SUPABASE abajo).
+//  - La base de datos del Artifact, cuando se abre desde claude.ai.
+// Si no hay ninguno de los dos, la tabla no aparece y el juego anda igual.
+const SUPABASE = {
+  url: "",   // ej.: "https://abcdefgh.supabase.co"
+  key: ""    // la clave "anon" o "publishable" (es pública, la protegen las reglas de supabase.sql)
+};
+
 const CLAVE_NOMBRE = "boca-trivia-nombre";
-const tabla = { db: null, uid: null, puedeEscribir: null, filas: [] };
+const CLAVE_JUGADOR = "boca-trivia-jugador";
+const tabla = { fuente: null, filas: [], miId: null };
 
 function pintarTablas() {
   for (const id of ["tabla-inicio", "tabla-final"]) {
@@ -684,7 +692,7 @@ function pintarTablas() {
     cuerpo.innerHTML = "";
     tabla.filas.forEach((f, i) => {
       const tr = document.createElement("tr");
-      if (f.id === tabla.uid) tr.className = "mia";
+      if (f.id && f.id === tabla.miId) tr.className = "mia";
       for (const [clase, valor] of [["", i + 1], ["nombre", f.nombre], ["", f.puntaje]]) {
         const td = document.createElement("td");
         if (clase) td.className = clase;
@@ -699,38 +707,94 @@ function pintarTablas() {
   }
 }
 
-async function conectarTabla() {
-  if (!window.claude || !window.claude.use) return;
+function limpiarFila(nombre, puntaje, id) {
+  return { id, nombre: String(nombre || "Hincha").slice(0, 20), puntaje: Number(puntaje) || 0 };
+}
+
+// --- Supabase (GitHub Pages) ---
+function fuenteSupabase() {
+  const base = SUPABASE.url.replace(/\/+$/, "") + "/rest/v1";
+  const headers = { apikey: SUPABASE.key, "Content-Type": "application/json" };
+  if (SUPABASE.key.startsWith("eyJ")) headers.Authorization = "Bearer " + SUPABASE.key;
+
+  // Sin cuentas: cada teléfono tiene un id al azar para que su fila sea siempre la misma.
+  let jugador = null;
   try {
-    const [db, user] = await Promise.all([claude.use("db"), claude.use("user")]);
-    if (!db) return;
-    tabla.db = db;
-    if (user) {
-      tabla.uid = await user.id();
-      tabla.puedeEscribir = await user.can("data.write");
+    jugador = localStorage.getItem(CLAVE_JUGADOR);
+    if (!jugador) {
+      jugador = crypto.randomUUID();
+      localStorage.setItem(CLAVE_JUGADOR, jugador);
     }
-    db.collection("records").orderBy("puntaje", "desc").limit(20).onSnapshot((snap) => {
-      tabla.filas = snap.docs.map((d) => {
-        const x = d.data() || {};
-        return { id: d.id, nombre: String(x.nombre || "Hincha").slice(0, 20), puntaje: Number(x.puntaje) || 0 };
-      });
+  } catch {}
+  if (!jugador) jugador = crypto.randomUUID();
+
+  return {
+    async cargar() {
+      const r = await fetch(`${base}/records?select=nombre,puntaje&order=puntaje.desc&limit=20`, { headers });
+      if (!r.ok) throw new Error(r.status);
+      tabla.filas = (await r.json()).map((x) => limpiarFila(x.nombre, x.puntaje));
       pintarTablas();
-    }, () => {});
+    },
+    // En este teléfono el récord local ya dice si hay marca nueva.
+    async puedeGuardar(_puntos, esRecordLocal) { return esRecordLocal; },
+    async guardar(nombre, puntos) {
+      const r = await fetch(`${base}/rpc/guardar_record`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ p_jugador: jugador, p_nombre: nombre, p_puntaje: puntos })
+      });
+      if (!r.ok) throw new Error(r.status);
+      await this.cargar();
+    }
+  };
+}
+
+// --- Base de datos del Artifact (claude.ai) ---
+async function fuenteArtifact() {
+  const [db, user] = await Promise.all([claude.use("db"), claude.use("user")]);
+  if (!db || !user) return null;
+  const uid = await user.id();
+  if (!uid) return null;
+  const puedeEscribir = await user.can("data.write");
+  tabla.miId = uid;
+  db.collection("records").orderBy("puntaje", "desc").limit(20).onSnapshot((snap) => {
+    tabla.filas = snap.docs.map((d) => {
+      const x = d.data() || {};
+      return limpiarFila(x.nombre, x.puntaje, d.id);
+    });
+    pintarTablas();
+  }, () => {});
+  return {
+    async cargar() {},
+    async puedeGuardar(puntos) {
+      if (puedeEscribir === false) return false;
+      const snap = await db.doc("records/" + uid).get();
+      return puntos > (snap.exists ? Number(snap.data().puntaje) || 0 : 0);
+    },
+    async guardar(nombre, puntos) {
+      await db.doc("records/" + uid).set({ nombre, puntaje: puntos, fecha: new Date().toISOString() });
+    }
+  };
+}
+
+async function conectarTabla() {
+  try {
+    if (SUPABASE.url && SUPABASE.key) tabla.fuente = fuenteSupabase();
+    else if (window.claude && window.claude.use) tabla.fuente = await fuenteArtifact();
+    if (tabla.fuente) await tabla.fuente.cargar();
   } catch {}
 }
 
-async function ofrecerGuardar() {
+async function ofrecerGuardar(esRecordLocal) {
   const form = $("guardar");
   const aviso = $("aviso-guardar");
   form.hidden = true;
   aviso.hidden = true;
-  if (!tabla.db || !tabla.uid || estado.puntos === 0 || tabla.puedeEscribir === false) return;
-  let propio = 0;
-  try {
-    const snap = await tabla.db.doc("records/" + tabla.uid).get();
-    if (snap.exists) propio = Number(snap.data().puntaje) || 0;
-  } catch {}
-  if (estado.puntos <= propio) return;
+  if (!tabla.fuente || estado.puntos === 0) return;
+  tabla.fuente.cargar().catch(() => {});
+  let ofrecer = false;
+  try { ofrecer = await tabla.fuente.puedeGuardar(estado.puntos, esRecordLocal); } catch {}
+  if (!ofrecer) return;
   try { $("nombre").value = localStorage.getItem(CLAVE_NOMBRE) || ""; } catch {}
   $("btn-guardar").disabled = false;
   form.querySelector(".fila").hidden = false;
@@ -744,7 +808,7 @@ $("guardar").addEventListener("submit", async (e) => {
   const aviso = $("aviso-guardar");
   $("btn-guardar").disabled = true;
   try {
-    await tabla.db.doc("records/" + tabla.uid).set({ nombre, puntaje: estado.puntos, fecha: new Date().toISOString() });
+    await tabla.fuente.guardar(nombre, estado.puntos);
     try { localStorage.setItem(CLAVE_NOMBRE, nombre); } catch {}
     $("guardar").querySelector(".fila").hidden = true;
     aviso.textContent = `Listo, ${nombre}: quedaste anotado con ${estado.puntos} puntos.`;
@@ -752,7 +816,7 @@ $("guardar").addEventListener("submit", async (e) => {
     $("btn-guardar").disabled = false;
     aviso.textContent = err && err.code === "invalid_argument"
       ? "No tenés permiso para escribir en la tabla. Pedile al dueño del juego acceso de Colaborador."
-      : "No se pudo guardar. Probá de nuevo en un momento.";
+      : "No se pudo guardar. Revisá la conexión y probá de nuevo.";
   }
   aviso.hidden = false;
 });
